@@ -6,6 +6,7 @@ class Storage:
         if os.path.isdir(json_path):
             raise Exception("Storage path is a directory.")
         self.json_path = json_path
+        self._access_path = json_path + ".access.json"
         if not os.path.exists(self.json_path):
             with open(self.json_path, "w") as f:
                 json.dump([], f)
@@ -16,9 +17,45 @@ class Storage:
             raise Exception("Storage file is broken or unreadable.")
         if not isinstance(self._data, list):
             raise Exception("Storage file format invalid.")
+        # アクセス数の永続化
+        if os.path.exists(self._access_path):
+            try:
+                with open(self._access_path, "r") as f:
+                    self._access = json.load(f)
+            except Exception:
+                self._access = {}
+        else:
+            self._access = {}
     def _save(self):
         with open(self.json_path, "w") as f:
             json.dump(self._data, f, ensure_ascii=False)
+        with open(self._access_path, "w") as f:
+            json.dump(self._access, f, ensure_ascii=False)
+
+    def record_access(self, paper_id):
+        self._access[paper_id] = self._access.get(paper_id, 0) + 1
+        self._save()
+
+    def get_access_count(self, paper_id):
+        return self._access.get(paper_id, 0)
+
+    def reset_access(self, paper_id):
+        self._access[paper_id] = 0
+        self._save()
+
+    def get_ranking(self, order="popular", limit=None, filter_keyword=None):
+        papers = self._data.copy()
+        if filter_keyword:
+            norm_kw = self._normalize(filter_keyword)
+            papers = [p for p in papers if norm_kw in self._normalize(p.get("title", ""))]
+        if order == "popular":
+            papers.sort(key=lambda p: (-self._access.get(p["id"], 0), p["id"]))
+        elif order == "newest":
+            # ファイル保存順を利用。新しいものが後ろにある前提
+            papers = list(reversed(papers))
+        if limit:
+            papers = papers[:limit]
+        return papers
     def add(self, paper):
         idx = next((i for i, p in enumerate(self._data) if p["id"] == paper["id"]), None)
         if idx is not None:
