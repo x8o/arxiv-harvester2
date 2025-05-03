@@ -34,11 +34,14 @@ class Storage:
                 return p
         return None
     def search(self, keyword):
+        norm_kw = self._normalize(keyword)
         result = []
         for p in self._data:
-            if (keyword in p.get("title", "") or
-                keyword in ",".join(p.get("authors", [])) or
-                keyword in p.get("summary", "")):
+            if (
+                norm_kw in self._normalize(p.get("title", "")) or
+                norm_kw in self._normalize(",".join(p.get("authors", []))) or
+                norm_kw in self._normalize(p.get("summary", ""))
+            ):
                 result.append(p)
         return result
     def update(self, paper_id, new_paper):

@@ -47,14 +47,16 @@ def search_arxiv(query, max_results=10, start_date=None, end_date=None, search_f
             title = entry.find('atom:title', ns).text.strip()
             authors = [a.find('atom:name', ns).text.strip() for a in entry.findall('atom:author', ns)]
             summary = entry.find('atom:summary', ns).text.strip()
+            arxiv_id = entry.find('atom:id', ns).text
             pdf_url = None
             for link in entry.findall('atom:link', ns):
                 if link.attrib.get('type') == 'application/pdf':
                     pdf_url = link.attrib.get('href')
                     break
             if not pdf_url:
-                pdf_url = entry.find('atom:id', ns).text.replace('abs', 'pdf') + '.pdf'
+                pdf_url = arxiv_id.replace('abs', 'pdf') + '.pdf'
             results.append({
+                "id": arxiv_id,
                 "title": title,
                 "authors": authors,
                 "summary": summary,
